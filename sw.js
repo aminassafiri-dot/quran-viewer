@@ -1,5 +1,6 @@
 // Bump VERSION whenever you replace any file, so phones pick up the update.
-const VERSION = 'v2';
+// Keep it the same as APP_VERSION in index.html.
+const VERSION = 'v3';
 const CACHE = 'quran-viewer-' + VERSION;
 const CORE = ['./', 'index.html', 'manifest.webmanifest', 'pdf.min.js', 'pdf.worker.min.js',
               'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>Quran – Pages 1–604</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -10,12 +10,12 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Quran">
-<link rel="icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   :root{--bar-h:48px;--bg:#2b2b2b;--bar:#1f1f1fee;--fg:#f2f2f2;--accent:#4aa3ff}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;touch-action:pan-y}
 
   /* Toolbar */
   #bar{position:fixed;top:0;left:0;right:0;z-index:20;height:calc(var(--bar-h) + env(safe-area-inset-top));
@@ -28,29 +28,25 @@
   #bar button:disabled{opacity:.35}
   #pageBox{flex:1;display:flex;justify-content:center;align-items:center;gap:6px;font-size:15px;white-space:nowrap}
   #pageIn{width:58px;height:34px;border-radius:8px;border:1px solid #ffffff40;background:#00000040;color:var(--fg);font-size:16px;text-align:center}
-  #zoomLbl{font-size:12px;opacity:.7;min-width:38px;text-align:center}
 
-  /* Settings panel */
+  /* Menu panel */
   #panel{position:fixed;z-index:19;top:calc(var(--bar-h) + env(safe-area-inset-top));left:8px;right:8px;max-width:420px;margin:0 auto;
     background:#1f1f1f;border:1px solid #ffffff22;border-radius:12px;padding:14px;display:none;box-shadow:0 8px 30px #0008}
   #panel.open{display:block}
   #panel button{appearance:none;border:0;background:#ffffff1a;color:var(--fg);border-radius:8px;cursor:pointer;font-family:inherit}
   #panel button:active{background:#ffffff40}
   #panel h3{margin:0 0 8px;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;opacity:.65}
-  #panel .seg{display:flex;gap:6px;margin-bottom:14px}
-  #panel .seg button{flex:1;height:auto;padding:10px 8px;font-size:14px;line-height:1.25;background:#ffffff14}
-  #panel .seg button.on{background:var(--accent);color:#001a33;font-weight:600}
-  #panel .seg button{background:#ffffff14}
   #panel input[type=range]{width:100%;margin:4px 0 14px}
   #panel .row{display:flex;gap:6px;margin-bottom:12px}
   #panel .row button{flex:1;height:38px;font-size:14px}
-  #panel p{margin:0;font-size:12px;opacity:.6;line-height:1.4}
+  #panel p{margin:0 0 8px;font-size:12px;opacity:.6;line-height:1.4}
+  #panel .ver{margin:0;font-size:12px;opacity:.85;font-weight:600}
 
-  /* Page area */
-  #scroller{position:fixed;inset:0;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  /* Page area: vertical scroll only, no pinch/double-tap zoom, always fit width */
+  #scroller{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
     padding:calc(var(--bar-h) + env(safe-area-inset-top)) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    touch-action:pan-x pan-y pinch-zoom}
-  #stage{display:flex;justify-content:flex-start;min-width:100%;width:max-content}
+    touch-action:pan-y}
+  #stage{display:flex;justify-content:center;width:100%}
   .pg{position:relative;margin:0 auto;background:#fff;box-shadow:0 0 0 1px #0003}
   .pg canvas{display:block}
   .pg.in-l{animation:inl .22s ease-out}
@@ -78,24 +74,18 @@
 <body>
 
 <div id="bar">
-  <button id="btnMenu" aria-label="Settings">☰</button>
-  <button id="btnL" aria-label="Left page button">‹</button>
+  <button id="btnMenu" aria-label="Menu">☰</button>
+  <button id="btnL" aria-label="Next page">›</button>
   <div id="pageBox"><input id="pageIn" type="number" inputmode="numeric" min="1" value="1" aria-label="Page number"><span id="pageTot">/ 604</span></div>
-  <button id="btnR" aria-label="Right page button">›</button>
-  <button id="btnZm" aria-label="Zoom out">A−</button>
-  <button id="btnZp" aria-label="Zoom in">A+</button>
+  <button id="btnR" aria-label="Previous page">‹</button>
 </div>
 
 <div id="panel">
-  <h3>Swipe direction</h3>
-  <div class="seg">
-    <button id="dirRtl">Swipe → right<br>for next page<br><small>(Arabic book style)</small></button>
-    <button id="dirLtr">Swipe ← left<br>for next page<br><small>(Normal style)</small></button>
-  </div>
   <h3>Go to page</h3>
   <input id="slider" type="range" min="1" max="604" value="1">
-  <div class="row"><button id="btnFit">Fit width</button><button id="btnFirst">First page</button></div>
-  <p>Your last page, zoom and scroll position are saved automatically on this device. Works fully offline.</p>
+  <div class="row"><button id="btnFirst">First page</button></div>
+  <p>Swipe right for the next page, swipe left for the previous page. Your last page and scroll position are saved automatically on this device. Works fully offline.</p>
+  <p class="ver" id="verLbl"></p>
 </div>
 
 <div id="scroller"><div id="stage"><div class="pg" id="pg"></div></div></div>
@@ -104,20 +94,28 @@
 <div id="loading"><div class="spin"></div><div id="loadMsg">Loading viewer…</div></div>
 
 <script src="pdf.min.js"></script>
-
 <script>
 (async function () {
   'use strict';
   const $ = id => document.getElementById(id);
+
+  // Keep this the same as VERSION in sw.js every time you publish an update.
+  const APP_VERSION = 'v3';
+  $('verLbl').textContent = 'Version ' + APP_VERSION;
+
   const DOC_ID = 'quran_pages_1-604';
   const KEY = 'offlinePdfViewer:' + DOC_ID;
-  const MAX_PIXELS = 15500000;          // stay under iOS canvas limit (~16.7M)
-  const ZOOMS = [1, 1.25, 1.5, 2, 2.5, 3];
-  const SWIPE_MIN = 60;
+  const MAX_PIXELS = 15500000;          // stay under mobile canvas limit (~16.7M)
+  const SWIPE_MIN = 60;                 // minimum swipe distance in px
 
   // ---------- state & persistence ----------
-  const st = { page: 1, zoom: 1, rtl: true, sy: 0 };
-  try { Object.assign(st, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
+  // Zoom is fixed (always fit width) and swipe is always Arabic-book style (swipe right = next page).
+  const st = { page: 1, sy: 0 };
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+    if (saved.page) st.page = saved.page;
+    if (saved.sy != null) st.sy = saved.sy;
+  } catch (e) {}
   const hm = /[#&]p=(\d+)/.exec(location.hash);
   if (hm) st.page = parseInt(hm[1], 10);
   function save() {
@@ -125,18 +123,15 @@
     try { history.replaceState(null, '', '#p=' + st.page); } catch (e) {}
   }
 
+  // Block pinch-zoom and double-tap zoom everywhere
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev =>
+    document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+  document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+  document.addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+
   const setMsg = m => { $('loadMsg').textContent = m; };
 
-  // ---------- load embedded library, worker and PDF ----------
-  function bytesFrom(id) {
-    const el = $(id);
-    const bin = atob(el.textContent.trim());
-    el.textContent = '';                       // free memory
-    const u = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-    return u;
-  }
-
+  // ---------- load PDF engine and document ----------
   let pdfjsLib, pdf;
   try {
     setMsg('Preparing viewer…');
@@ -161,12 +156,12 @@
   const TOTAL = pdf.numPages;
   const clamp = n => Math.max(1, Math.min(TOTAL, n | 0));
   st.page = clamp(st.page || 1);
-  if (!ZOOMS.includes(st.zoom)) st.zoom = 1;
   $('pageTot').textContent = '/ ' + TOTAL;
   $('pageIn').max = TOTAL;
   $('slider').max = TOTAL;
+  $('slider').style.direction = 'rtl';
 
-  // ---------- rendering ----------
+  // ---------- rendering (always fit width) ----------
   const scroller = $('scroller'), pgEl = $('pg');
   let token = 0, curTask = null, suppressUntil = 0;
 
@@ -180,9 +175,8 @@
       const page = await pdf.getPage(n);
       if (my !== token) return;
 
-      const avail = scroller.clientWidth - 0;
       const base = page.getViewport({ scale: 1 });
-      const cssW = Math.max(200, Math.floor(avail * st.zoom));
+      const cssW = Math.max(200, Math.floor(scroller.clientWidth));
       const scale = cssW / base.width;
       const vp = page.getViewport({ scale });
 
@@ -212,7 +206,6 @@
       tl.style.setProperty('--total-scale-factor', scale);
       tl.style.width = Math.floor(vp.width) + 'px';
       tl.style.height = Math.floor(vp.height) + 'px';
-      const oldFrac = opts.keepFrac != null ? opts.keepFrac : null;
 
       pgEl.className = 'pg';
       pgEl.replaceChildren(cv, tl);
@@ -223,9 +216,8 @@
       // scroll position (programmatic scrolls must not auto-hide the toolbar)
       suppressUntil = Date.now() + 400;
       $('bar').classList.remove('hidden');
-      if (oldFrac != null) scroller.scrollTop = oldFrac * pgEl.offsetHeight;
+      if (opts.keepFrac != null) scroller.scrollTop = opts.keepFrac * pgEl.offsetHeight;
       else if (opts.top) scroller.scrollTop = 0;
-      if (opts.top || opts.resetX) scroller.scrollLeft = Math.max(0, (scroller.scrollWidth - scroller.clientWidth) / 2);
 
       st.page = n; updateUI(); save();
       curTask = null;
@@ -248,55 +240,33 @@
     }
   }
 
-  // ---------- navigation ----------
+  // ---------- navigation (Arabic book style) ----------
+  // Right swipe / left button = next page. Left swipe / right button = previous page.
   function go(n, from) {
     n = clamp(n);
-    if (n === st.page && !from) return;
     if (n === st.page) return;
     show(n, { from: from || 0, top: true });
     $('bar').classList.remove('hidden');
   }
-  // direction helpers: sign = +1 means "swipe moved content to the right"
   const nextPage = sign => go(st.page + 1, sign);
   const prevPage = sign => go(st.page - 1, sign);
 
   function updateUI() {
     $('pageIn').value = st.page;
     $('slider').value = st.page;
-    $('zoomLbl') && ($('zoomLbl').textContent = Math.round(st.zoom * 100) + '%');
-    $('btnZm').disabled = st.zoom <= ZOOMS[0];
-    $('btnZp').disabled = st.zoom >= ZOOMS[ZOOMS.length - 1];
-    // RTL: left button = next page, right button = previous page
-    $('btnL').textContent = st.rtl ? '›' : '‹';
-    $('btnR').textContent = st.rtl ? '‹' : '›';
-    $('btnL').disabled = st.rtl ? st.page >= TOTAL : st.page <= 1;
-    $('btnR').disabled = st.rtl ? st.page <= 1 : st.page >= TOTAL;
-    $('dirRtl').classList.toggle('on', st.rtl);
-    $('dirLtr').classList.toggle('on', !st.rtl);
-    $('slider').style.direction = st.rtl ? 'rtl' : 'ltr';
+    $('btnL').disabled = st.page >= TOTAL;   // left button = next page
+    $('btnR').disabled = st.page <= 1;       // right button = previous page
     document.title = 'Page ' + st.page + ' / ' + TOTAL;
   }
 
-  $('btnL').onclick = () => st.rtl ? nextPage(-1) : prevPage(-1);
-  $('btnR').onclick = () => st.rtl ? prevPage(1) : nextPage(1);
+  $('btnL').onclick = () => nextPage(-1);
+  $('btnR').onclick = () => prevPage(1);
   $('pageIn').addEventListener('change', e => { go(parseInt(e.target.value, 10) || st.page, 0); e.target.blur(); });
   $('pageIn').addEventListener('focus', e => e.target.select());
   $('slider').addEventListener('change', e => go(parseInt(e.target.value, 10), 0));
   $('slider').addEventListener('input', e => { $('pageIn').value = e.target.value; });
-
-  function setZoom(z) {
-    if (z === st.zoom) return;
-    const frac = scroller.scrollTop / Math.max(1, pgEl.offsetHeight);
-    st.zoom = z; updateUI(); save();
-    show(st.page, { keepFrac: frac, resetX: true });
-  }
-  $('btnZp').onclick = () => setZoom(ZOOMS[Math.min(ZOOMS.length - 1, ZOOMS.indexOf(st.zoom) + 1)]);
-  $('btnZm').onclick = () => setZoom(ZOOMS[Math.max(0, ZOOMS.indexOf(st.zoom) - 1)]);
-  $('btnFit').onclick = () => setZoom(1);
   $('btnFirst').onclick = () => { go(1, 0); $('panel').classList.remove('open'); };
   $('btnMenu').onclick = () => $('panel').classList.toggle('open');
-  $('dirRtl').onclick = () => { st.rtl = true; updateUI(); save(); };
-  $('dirLtr').onclick = () => { st.rtl = false; updateUI(); save(); };
   scroller.addEventListener('pointerdown', () => $('panel').classList.remove('open'));
 
   // ---------- swipe ----------
@@ -304,37 +274,26 @@
   scroller.addEventListener('touchstart', e => {
     if (e.touches.length !== 1) { t0 = null; return; }
     const t = e.touches[0];
-    t0 = { x: t.clientX, y: t.clientY, time: Date.now(), sl: scroller.scrollLeft };
+    t0 = { x: t.clientX, y: t.clientY, time: Date.now() };
   }, { passive: true });
   scroller.addEventListener('touchcancel', () => { t0 = null; }, { passive: true });
   scroller.addEventListener('touchend', e => {
     if (!t0) return;
     const s = t0; t0 = null;
     if (e.touches.length) return;
-    const vv = window.visualViewport;
-    if (vv && vv.scale > 1.05) return;                       // browser pinch-zoomed: don't hijack
     const sel = window.getSelection && String(window.getSelection());
     if (sel) return;                                         // user is selecting text
     const t = e.changedTouches[0];
     const dx = t.clientX - s.x, dy = t.clientY - s.y, dt = Date.now() - s.time;
     if (Math.abs(dx) < SWIPE_MIN || Math.abs(dx) < Math.abs(dy) * 1.5 || dt > 900) return;
-    // when zoomed in and horizontally scrollable, only navigate from the edge
-    const max = scroller.scrollWidth - scroller.clientWidth;
-    const atLeft = s.sl <= 1 && scroller.scrollLeft <= 1;
-    const atRight = s.sl >= max - 1 && scroller.scrollLeft >= max - 1;
-    if (max > 2 && ((dx > 0 && !atLeft) || (dx < 0 && !atRight))) return;
-    const sign = dx > 0 ? 1 : -1;
-    const wantsNext = st.rtl ? dx > 0 : dx < 0;
-    wantsNext ? nextPage(sign) : prevPage(sign);
+    dx > 0 ? nextPage(1) : prevPage(-1);                     // swipe right = next page
   }, { passive: true });
 
   // ---------- keyboard ----------
   document.addEventListener('keydown', e => {
     if (e.target && e.target.tagName === 'INPUT') return;
-    if (e.key === 'ArrowLeft') { st.rtl ? nextPage(-1) : prevPage(-1); }
-    else if (e.key === 'ArrowRight') { st.rtl ? prevPage(1) : nextPage(1); }
-    else if (e.key === 'PageDown' && e.ctrlKey) nextPage(st.rtl ? 1 : -1);
-    else if (e.key === 'PageUp' && e.ctrlKey) prevPage(st.rtl ? -1 : 1);
+    if (e.key === 'ArrowLeft') nextPage(-1);
+    else if (e.key === 'ArrowRight') prevPage(1);
     else if (e.key === 'Home' && e.ctrlKey) go(1, 0);
     else if (e.key === 'End' && e.ctrlKey) go(TOTAL, 0);
   });
@@ -355,7 +314,7 @@
   });
   window.addEventListener('pagehide', () => { st.sy = scroller.scrollTop / Math.max(1, pgEl.offsetHeight); save(); });
 
-  // ---------- re-render when the width changes (rotation, resize) ----------
+  // ---------- re-fit when the width changes (rotation, resize) ----------
   let lastW = scroller.clientWidth, rzT = null;
   window.addEventListener('resize', () => {
     clearTimeout(rzT);
@@ -363,7 +322,7 @@
       const w = scroller.clientWidth;
       if (Math.abs(w - lastW) < 2) return;     // ignore mobile URL-bar height changes
       lastW = w;
-      show(st.page, { keepFrac: scroller.scrollTop / Math.max(1, pgEl.offsetHeight), resetX: true });
+      show(st.page, { keepFrac: scroller.scrollTop / Math.max(1, pgEl.offsetHeight) });
     }, 250);
   });
 
@@ -374,7 +333,7 @@
 
   // ---------- go ----------
   updateUI();
-  await show(st.page, { keepFrac: st.sy || 0, resetX: true });
+  await show(st.page, { keepFrac: st.sy || 0 });
   lastTop = scroller.scrollTop;
 })();
 </script>
