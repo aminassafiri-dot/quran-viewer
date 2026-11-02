@@ -1,6 +1,6 @@
 // Bump VERSION whenever you replace any app file, so phones pick up the update.
 // Keep it the same as APP_VERSION in index.html.
-const VERSION = 'v6';
+const VERSION = 'v7';
 const CACHE = 'quran-viewer-' + VERSION;
 
 // The PDF has its own cache so a new app version does not download the 6 MB file again.
