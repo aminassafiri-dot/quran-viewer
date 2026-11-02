@@ -1,12 +1,14 @@
-QURAN OFFLINE VIEWER - INSTALLABLE (PWA)
+UPDATE PACK - fixes "this app cannot be installed"
 
-1. Upload the CONTENTS of this folder (not the folder itself) to any free HTTPS static host:
-   - Netlify Drop: go to app.netlify.com/drop and drag the folder in. Gives you an https URL in seconds.
-   - or GitHub Pages / Cloudflare Pages.
-   (SharePoint/OneDrive cannot host this - they will not serve the page as a website.)
+Upload these 7 files into the TOP LEVEL of your GitHub repository (Add file > Upload files),
+replacing the existing manifest.webmanifest and sw.js. Do NOT upload a folder.
+Leave index.html, the PDF and the pdf*.js files as they are.
 
-2. On your Android phone, open the URL in Chrome and let it finish loading (about 6 MB, first time only).
+   manifest.webmanifest   sw.js   check.html
+   icon-192.png   icon-512.png   icon-maskable-512.png
 
-3. Chrome menu (three dots) > "Install app" (or "Add to Home screen"). It then opens full screen like an app and works offline.
-
-Updating: replace the files on the host and change VERSION in sw.js (e.g. 'v2') so phones refresh their copy.
+Then on your phone:
+1. Open  https://<your-username>.github.io/<repo>/check.html  in Chrome (normal tab, not Incognito).
+2. Fix anything marked with a red cross. If it says Chrome can install, tap "Install app now".
+3. If you had the old version installed or tried before: Chrome menu > Settings > Site settings > All sites >
+   your github.io site > Clear & reset, then reload.

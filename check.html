@@ -1,0 +1,44 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="manifest" href="manifest.webmanifest"><title>Install check</title>
+<style>body{font:16px system-ui,sans-serif;margin:0;padding:16px;background:#1f1f1f;color:#eee}
+h1{font-size:20px;margin:0 0 12px}.r{padding:10px 12px;margin:6px 0;border-radius:8px;background:#2c2c2c;display:flex;gap:10px;align-items:flex-start}
+.r b{min-width:22px}.ok b{color:#5ad37a}.no b{color:#ff6b6b}.wn b{color:#ffc24b}small{opacity:.7;display:block;word-break:break-all}
+button{font-size:17px;padding:12px 18px;border:0;border-radius:10px;background:#4aa3ff;color:#001a33;font-weight:600;margin:10px 0;display:none}
+a{color:#7db8ff}</style></head><body>
+<h1>Install check</h1><div id="out"></div>
+<button id="inst">Install app now</button>
+<p><a href="index.html">Open the viewer</a></p>
+<script>
+const out=document.getElementById('out');
+const add=(s,t,d)=>{const e=document.createElement('div');e.className='r '+s;e.innerHTML='<b>'+({ok:'✔',no:'✘',wn:'!'})[s]+'</b><div>'+t+(d?'<small>'+d+'</small>':'')+'</div>';out.appendChild(e)};
+let deferred=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;add('ok','Chrome says this app CAN be installed');const b=document.getElementById('inst');b.style.display='inline-block';b.onclick=()=>deferred.prompt()});
+window.addEventListener('appinstalled',()=>add('ok','Installed'));
+(async()=>{
+  add(location.protocol==='https:'?'ok':'no','Secure address (https)',location.href);
+  const m=navigator.userAgent.match(/Chrome\/(\d+)/);const brand=/EdgA|OPR|SamsungBrowser|Firefox|DuckDuckGo/.test(navigator.userAgent);
+  add(m&&!brand?'ok':'wn','Browser: '+(m?'Chrome '+m[1]:'not Chrome'),navigator.userAgent);
+  add(matchMedia('(display-mode: standalone)').matches?'wn':'ok',matchMedia('(display-mode: standalone)').matches?'Already running as an installed app':'Running in a normal browser tab');
+  let man=null;
+  try{const r=await fetch('manifest.webmanifest',{cache:'no-store'});add(r.ok?'ok':'no','Manifest file found',r.status+' '+(r.headers.get('content-type')||''));man=await r.json();}
+  catch(e){add('no','Manifest missing or not valid JSON',String(e))}
+  if(man){
+    for(const k of ['name','start_url','display']) add(man[k]?'ok':'no','Manifest has "'+k+'"',String(man[k]||''));
+    for(const ic of man.icons||[]){
+      const u=new URL(ic.src,location.href).href;
+      await new Promise(res=>{const i=new Image();i.onload=()=>{const good=(i.naturalWidth+'x'+i.naturalHeight)===ic.sizes;add(good?'ok':'wn','Icon '+ic.sizes+' ('+ic.purpose+') loads',u+' – actual '+i.naturalWidth+'x'+i.naturalHeight);res()};i.onerror=()=>{add('no','Icon '+ic.sizes+' FAILED to load – upload this file',u);res()};i.src=u});
+    }
+    for(const f of ['index.html','pdf.min.js','pdf.worker.min.js','quran_pages_1-604.pdf']){
+      try{const r=await fetch(f,{method:'HEAD',cache:'no-store'});add(r.ok?'ok':'no','File '+f,r.status+(r.headers.get('content-length')?' – '+Math.round(r.headers.get('content-length')/1024)+' KB':''))}catch(e){add('no','File '+f+' not reachable')}
+    }
+  }
+  if(!('serviceWorker' in navigator)) add('no','Service workers not supported here');
+  else{
+    try{const reg=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;add('ok','Service worker registered',reg.scope);
+      setTimeout(async()=>{const k=await caches.keys();let n=0;for(const x of k){n+=(await (await caches.open(x)).keys()).length}add(n>=9?'ok':'wn','Files cached for offline: '+n+' of 9',k.join(', '))},3000);
+    }catch(e){add('no','Service worker failed',String(e))}
+  }
+  setTimeout(()=>{if(!deferred)add('wn','No install offer from Chrome (yet)','Common reasons: already installed, Incognito tab, work-managed phone blocking installs, or the checks above show a ✘. Try the ⋮ menu > Install app / Add to Home screen.')},5000);
+})();
+</script></body></html>
