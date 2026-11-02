@@ -16,12 +16,13 @@
   /* --bg is the colour behind the pages. It matches the page colour so nothing dark flashes while swiping. */
   :root{--bar-h:48px;--bg:#ffffff;--bar:#1f1f1f;--fg:#f2f2f2;--accent:#4aa3ff}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;height:100%;background:var(--bg);color:#222;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;touch-action:pan-y}
+  /* overscroll-behavior:none switches off pull-down-to-refresh and the bounce/glow at the edges */
+  html,body{margin:0;height:100%;background:var(--bg);color:#222;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;touch-action:pan-y;overscroll-behavior:none}
 
   /* Toolbar */
   #bar{position:fixed;top:0;left:0;right:0;z-index:20;height:calc(var(--bar-h) + env(safe-area-inset-top));
     padding:env(safe-area-inset-top) max(8px,env(safe-area-inset-right)) 0 max(8px,env(safe-area-inset-left));
-    display:flex;align-items:center;gap:6px;background:var(--bar);color:var(--fg);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    display:flex;align-items:center;gap:6px;background:var(--bar);color:var(--fg);
     transition:transform .2s ease}
   #bar.hidden{transform:translateY(-100%)}
   #bar button{appearance:none;border:0;background:#ffffff1a;color:var(--fg);height:36px;min-width:40px;padding:0 10px;border-radius:8px;font-size:18px;line-height:1;cursor:pointer}
@@ -31,13 +32,24 @@
 
   /* Menu panel */
   #panel{position:fixed;z-index:19;top:calc(var(--bar-h) + env(safe-area-inset-top));left:8px;right:8px;max-width:420px;margin:0 auto;
+    max-height:calc(100vh - var(--bar-h) - env(safe-area-inset-top) - 24px);max-height:calc(100dvh - var(--bar-h) - env(safe-area-inset-top) - 24px);overflow-y:auto;overscroll-behavior:contain;
     background:#1f1f1f;color:var(--fg);border:1px solid #ffffff22;border-radius:12px;padding:14px;display:none;box-shadow:0 8px 30px #0008}
   #panel.open{display:block}
-  #panel p{margin:0 0 8px;font-size:13px;opacity:.75;line-height:1.45}
+  #panel p{margin:0 0 10px;font-size:13px;opacity:.75;line-height:1.45}
+  #panel .meta{margin:10px 0 4px;font-size:12px;opacity:.7}
   #panel .ver{margin:0;font-size:12px;opacity:.85;font-weight:600}
+  #panel h3{display:flex;align-items:center;justify-content:space-between;margin:2px 0 6px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;opacity:.75}
+  #logClear{appearance:none;border:0;background:#ffffff1a;color:var(--fg);border-radius:6px;font-size:11px;padding:4px 9px;cursor:pointer;text-transform:none;letter-spacing:0}
+  #logClear:active{background:#ffffff40}
+  #log{list-style:none;margin:0;padding:0;max-height:200px;overflow-y:auto;overscroll-behavior:contain;border-radius:8px;background:#ffffff0d}
+  #log li{display:flex;justify-content:space-between;gap:10px;padding:7px 10px;font-size:13px;border-bottom:1px solid #ffffff12}
+  #log li:last-child{border-bottom:0}
+  #log li b{font-weight:600}
+  #log li span{opacity:.65;font-size:12px;white-space:nowrap}
+  #log li.empty{display:block;opacity:.6;font-size:12px;line-height:1.4}
 
-  /* Page area: vertical scroll only, no pinch/double-tap zoom, always fit width */
-  #scroller{position:fixed;inset:0;background:var(--bg);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  /* Page area: vertical scroll only, no pinch/double-tap zoom, no pull-to-refresh, always fit width */
+  #scroller{position:fixed;inset:0;background:var(--bg);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:none;
     padding:calc(var(--bar-h) + env(safe-area-inset-top)) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     touch-action:pan-y}
   #stage{display:flex;justify-content:center;width:100%;background:var(--bg)}
@@ -62,6 +74,13 @@
   #hint .arrow{display:block;font-size:22px;line-height:1;margin-bottom:2px}
   #hint.ready{background:var(--accent);color:#001a33;border-color:transparent}
   #hint.end{background:#3a2a1ff2;border-color:#ffb34766}
+
+  /* "Update available" banner */
+  #update{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));z-index:30;display:none;align-items:center;gap:6px;
+    max-width:calc(100% - 24px);padding:6px 6px 6px 16px;border-radius:999px;background:var(--accent);color:#001a33;font-size:14px;font-weight:600;
+    box-shadow:0 6px 20px #0006;cursor:pointer;white-space:nowrap}
+  #update.show{display:flex}
+  #update button{appearance:none;border:0;background:#001a3322;color:#001a33;border-radius:999px;height:30px;min-width:30px;padding:0 10px;font-size:14px;font-weight:700;cursor:pointer}
 
   /* Selectable text layer (invisible text on top of canvas) */
   .textLayer{position:absolute;inset:0;overflow:clip;line-height:1;text-size-adjust:none;-webkit-text-size-adjust:none;
@@ -88,13 +107,21 @@
 </div>
 
 <div id="panel">
-  <p>Swipe right for the next page, swipe left for the previous page. Your last page and scroll position are saved automatically on this device. Works fully offline.</p>
+  <p>Swipe right for the next page, swipe left for the previous page. Tap the page to show or hide the toolbar. Your last page and scroll position are saved automatically. Works fully offline.</p>
+  <h3><span>Milestones</span><button id="logClear">Clear</button></h3>
+  <ul id="log"></ul>
+  <p class="meta" id="storLbl"></p>
   <p class="ver" id="verLbl"></p>
 </div>
 
 <div id="scroller"><div id="stage"><div class="pg" id="pg"></div></div></div>
 <div id="hint" aria-hidden="true"></div>
 <div id="busy"></div>
+
+<div id="update" role="button" aria-label="Update available. Tap to update.">
+  <span>Update available – tap to update</span>
+  <button id="updX" aria-label="Dismiss">✕</button>
+</div>
 
 <div id="loading"><div class="spin"></div><div id="loadMsg">Loading viewer…</div></div>
 
@@ -103,26 +130,33 @@
 (async function () {
   'use strict';
   const $ = id => document.getElementById(id);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   // Keep this the same as VERSION in sw.js every time you publish an update.
-  const APP_VERSION = 'v5';
+  const APP_VERSION = 'v6';
   $('verLbl').textContent = 'Version ' + APP_VERSION;
 
   const DOC_ID = 'quran_pages_1-604';
   const KEY = 'offlinePdfViewer:' + DOC_ID;
+  const LOG_KEY = 'offlinePdfViewer:milestones';
   const MAX_PIXELS = 15500000;          // stay under mobile canvas limit (~16.7M)
   const SWIPE_MIN = 60;                 // drag distance (px) needed to turn the page
   const DRAG_FOLLOW = 0.85;             // how closely the page follows the finger (1 = exactly)
   const DRAG_EDGE = 0.25;               // resistance when there is no page in that direction
   const EXIT_MS = 160;                  // slide-out time; the new page waits for this so there is no jump
+  const PRELOAD_DELAY = 250;            // wait after a page appears before drawing its neighbours
+  const MILESTONE_EVERY = 5;            // log pages ending in 0 or 5
+  const MILESTONE_MAX = 100;            // keep the most recent 100 entries
+  const LOW_MEMORY = !!(navigator.deviceMemory && navigator.deviceMemory <= 2);   // preload one page only
 
   // ---------- state & persistence ----------
   // Zoom is fixed (always fit width) and swipe is always Arabic-book style (swipe right = next page).
-  const st = { page: 1, sy: 0 };
+  const st = { page: 1, sy: 0, hideBar: false };
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
     if (saved.page) st.page = saved.page;
     if (saved.sy != null) st.sy = saved.sy;
+    st.hideBar = !!saved.hideBar;
   } catch (e) {}
   const hm = /[#&]p=(\d+)/.exec(location.hash);
   if (hm) st.page = parseInt(hm[1], 10);
@@ -131,6 +165,9 @@
     try { history.replaceState(null, '', '#p=' + st.page); } catch (e) {}
   }
 
+  const bar = $('bar'), panel = $('panel');
+  bar.classList.toggle('hidden', st.hideBar);
+
   // Block pinch-zoom and double-tap zoom everywhere
   ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev =>
     document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
@@ -138,6 +175,66 @@
   document.addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
 
   const setMsg = m => { $('loadMsg').textContent = m; };
+
+  // ---------- protect offline storage ----------
+  // Asks Android not to clear the saved copy of this app when the phone is short on space.
+  async function protectStorage() {
+    const lbl = $('storLbl');
+    try {
+      if (!(navigator.storage && navigator.storage.persist)) { lbl.textContent = ''; return; }
+      let ok = navigator.storage.persisted ? await navigator.storage.persisted() : false;
+      if (!ok) ok = await navigator.storage.persist();
+      lbl.textContent = ok ? 'Offline storage: protected ✓' : 'Offline storage: not protected';
+    } catch (e) { lbl.textContent = ''; }
+  }
+  protectStorage();
+
+  // ---------- milestone log ----------
+  let log = [];
+  try { log = JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); } catch (e) {}
+  if (!Array.isArray(log)) log = [];
+
+  function fmtTime(ts) {
+    const d = new Date(ts), now = new Date();
+    const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    if (d.toDateString() === now.toDateString()) return 'Today, ' + t;
+    const y = new Date(now); y.setDate(now.getDate() - 1);
+    if (d.toDateString() === y.toDateString()) return 'Yesterday, ' + t;
+    return d.toLocaleDateString([], { day: 'numeric', month: 'short' }) + ', ' + t;
+  }
+  function renderLog() {
+    const ul = $('log');
+    ul.textContent = '';
+    if (!log.length) {
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = 'Nothing yet. An entry is added each time you reach a page ending in 0 or 5.';
+      ul.appendChild(li);
+    } else {
+      log.forEach(it => {
+        const li = document.createElement('li');
+        const b = document.createElement('b'); b.textContent = 'Page ' + it.p;
+        const s = document.createElement('span'); s.textContent = fmtTime(it.t);
+        li.append(b, s);
+        ul.appendChild(li);
+      });
+    }
+    $('logClear').style.display = log.length ? '' : 'none';
+  }
+  function addMilestone(p) {
+    if (log[0] && log[0].p === p) return;                 // don't repeat the same page back-to-back
+    log.unshift({ p: p, t: Date.now() });                 // newest first
+    if (log.length > MILESTONE_MAX) log.length = MILESTONE_MAX;
+    try { localStorage.setItem(LOG_KEY, JSON.stringify(log)); } catch (e) {}
+    renderLog();
+  }
+  $('logClear').onclick = () => {
+    if (!confirm('Clear the milestone log?')) return;
+    log = [];
+    try { localStorage.removeItem(LOG_KEY); } catch (e) {}
+    renderLog();
+  };
+  renderLog();
 
   // ---------- load PDF engine and document ----------
   let pdfjsLib, pdf;
@@ -167,9 +264,79 @@
   $('pageTot').textContent = '/ ' + TOTAL;
   $('pageIn').max = TOTAL;
 
-  // ---------- rendering (always fit width) ----------
+  // ---------- rendering (always fit width) with neighbour-page preloading ----------
   const scroller = $('scroller'), pgEl = $('pg');
-  let token = 0, curTask = null, suppressUntil = 0, exitUntil = 0;
+  let token = 0, suppressUntil = 0, exitUntil = 0, preloadTimer = null;
+  let drag = null;   // swipe state, defined here so the preloader can wait while a swipe is in progress
+
+  // cache of drawn pages: "page@width" -> { n, w, done, cancelled, task, canvas, page, vp, scale, promise }
+  const cache = new Map();
+  const cssWidth = () => Math.max(200, Math.floor(scroller.clientWidth));
+  const cancelErr = () => { const e = new Error('cancelled'); e.name = 'RenderingCancelledException'; return e; };
+
+  function getRendered(n, w) {
+    const key = n + '@' + w;
+    const hit = cache.get(key);
+    if (hit) return hit.promise;
+    const e = { n, w, done: false, cancelled: false, task: null, canvas: null };
+    e.promise = (async () => {
+      const page = await pdf.getPage(n);
+      if (e.cancelled) throw cancelErr();
+      const base = page.getViewport({ scale: 1 });
+      const scale = w / base.width;
+      const vp = page.getViewport({ scale });
+      let os = Math.min(window.devicePixelRatio || 1, 3);
+      os = Math.max(0.5, Math.min(os, Math.sqrt(MAX_PIXELS / (vp.width * vp.height))));
+      const cv = document.createElement('canvas');
+      cv.width = Math.floor(vp.width * os);
+      cv.height = Math.floor(vp.height * os);
+      cv.style.width = Math.floor(vp.width) + 'px';
+      cv.style.height = Math.floor(vp.height) + 'px';
+      e.task = page.render({
+        canvas: cv,
+        canvasContext: cv.getContext('2d'),
+        viewport: vp,
+        transform: os !== 1 ? [os, 0, 0, os, 0, 0] : null
+      });
+      await e.task.promise;
+      if (e.cancelled) throw cancelErr();
+      e.page = page; e.vp = vp; e.scale = scale; e.canvas = cv; e.done = true;
+      return e;
+    })();
+    e.promise.catch(() => { if (cache.get(key) === e) cache.delete(key); });   // failed or cancelled: forget it
+    cache.set(key, e);
+    return e.promise;
+  }
+
+  // When a page is requested: stop unfinished background drawing for other pages, forget other widths
+  function dropStale(n, w) {
+    for (const [key, e] of cache) {
+      if (e.w !== w) { e.cancelled = true; try { e.task && e.task.cancel(); } catch (x) {} cache.delete(key); }
+      else if (!e.done && e.n !== n) { e.cancelled = true; try { e.task && e.task.cancel(); } catch (x) {} cache.delete(key); }
+    }
+  }
+  // After a page is on screen: keep only it and its two neighbours, free the rest
+  function evict(n, w) {
+    for (const [key, e] of cache) {
+      if (e.done && (e.w !== w || Math.abs(e.n - n) > 1)) {
+        cache.delete(key);
+        try { e.canvas.width = 0; e.canvas.height = 0; } catch (x) {}
+      }
+    }
+  }
+  function schedulePreload(n, w, my) {
+    clearTimeout(preloadTimer);
+    preloadTimer = setTimeout(async () => {
+      const order = LOW_MEMORY ? [n + 1] : [n + 1, n - 1];   // next page first: that is the usual direction
+      for (const m of order) {
+        if (m < 1 || m > TOTAL) continue;
+        while (drag && drag.mode === 'h') await sleep(150);  // don't compete with a swipe in progress
+        if (my !== token) return;
+        try { await getRendered(m, w); } catch (x) {}
+        if (my !== token) return;
+      }
+    }, PRELOAD_DELAY);
+  }
 
   function resetPageStyle() {
     pgEl.classList.remove('dragging', 'snap', 'exit');
@@ -178,60 +345,39 @@
   }
 
   // opts.enter: 'l' = new page slides in from the left, 'r' = from the right
+  // opts.nav: true when the reader moved to this page (used for the milestone log)
   async function show(n, opts) {
     opts = opts || {};
     n = clamp(n);
     const my = ++token;
-    if (curTask) { try { curTask.cancel(); } catch (e) {} curTask = null; }
-    $('busy').classList.add('on');
+    const w = cssWidth();
+    dropStale(n, w);
+    const have = cache.get(n + '@' + w);
+    if (!have || !have.done) $('busy').classList.add('on');
     try {
-      const page = await pdf.getPage(n);
-      if (my !== token) return;
-
-      const base = page.getViewport({ scale: 1 });
-      const cssW = Math.max(200, Math.floor(scroller.clientWidth));
-      const scale = cssW / base.width;
-      const vp = page.getViewport({ scale });
-
-      let os = Math.min(window.devicePixelRatio || 1, 3);
-      os = Math.max(0.5, Math.min(os, Math.sqrt(MAX_PIXELS / (vp.width * vp.height))));
-
-      const cv = document.createElement('canvas');
-      cv.width = Math.floor(vp.width * os);
-      cv.height = Math.floor(vp.height * os);
-      cv.style.width = Math.floor(vp.width) + 'px';
-      cv.style.height = Math.floor(vp.height) + 'px';
-
-      const task = page.render({
-        canvas: cv,
-        canvasContext: cv.getContext('2d'),
-        viewport: vp,
-        transform: os !== 1 ? [os, 0, 0, os, 0, 0] : null
-      });
-      curTask = task;
-      await task.promise;
+      const e = await getRendered(n, w);
       if (my !== token) return;
 
       // let the old page finish sliding out before the new one appears
       const wait = exitUntil - Date.now();
       if (opts.enter && wait > 0) {
-        await new Promise(r => setTimeout(r, wait));
+        await sleep(wait);
         if (my !== token) return;
       }
 
       // text layer (selectable text)
       const tl = document.createElement('div');
       tl.className = 'textLayer';
-      tl.style.setProperty('--scale-factor', scale);
-      tl.style.setProperty('--total-scale-factor', scale);
-      tl.style.width = Math.floor(vp.width) + 'px';
-      tl.style.height = Math.floor(vp.height) + 'px';
+      tl.style.setProperty('--scale-factor', e.scale);
+      tl.style.setProperty('--total-scale-factor', e.scale);
+      tl.style.width = Math.floor(e.vp.width) + 'px';
+      tl.style.height = Math.floor(e.vp.height) + 'px';
 
       resetPageStyle();
       pgEl.className = 'pg';
-      pgEl.replaceChildren(cv, tl);
-      pgEl.style.width = Math.floor(vp.width) + 'px';
-      pgEl.style.height = Math.floor(vp.height) + 'px';
+      pgEl.replaceChildren(e.canvas, tl);
+      pgEl.style.width = Math.floor(e.vp.width) + 'px';
+      pgEl.style.height = Math.floor(e.vp.height) + 'px';
       if (opts.enter) {
         void pgEl.offsetWidth;
         const cls = 'in-' + opts.enter;
@@ -241,23 +387,26 @@
 
       // scroll position (programmatic scrolls must not auto-hide the toolbar)
       suppressUntil = Date.now() + 400;
-      $('bar').classList.remove('hidden');
+      if (!st.hideBar) bar.classList.remove('hidden');
       if (opts.keepFrac != null) scroller.scrollTop = opts.keepFrac * pgEl.offsetHeight;
       else if (opts.top) scroller.scrollTop = 0;
 
       st.page = n; updateUI(); save();
-      curTask = null;
+      if (opts.nav && n % MILESTONE_EVERY === 0) addMilestone(n);
       $('busy').classList.remove('on');
       $('loading').classList.add('done');
 
+      evict(n, w);
+      schedulePreload(n, w, my);
+
       try {
         const textLayer = new pdfjsLib.TextLayer({
-          textContentSource: page.streamTextContent(),
+          textContentSource: e.page.streamTextContent(),
           container: tl,
-          viewport: vp
+          viewport: e.vp
         });
         await textLayer.render();
-      } catch (e) { /* text layer is optional */ }
+      } catch (x) { /* text layer is optional */ }
     } catch (err) {
       if (err && err.name === 'RenderingCancelledException') return;
       console.error(err);
@@ -272,8 +421,8 @@
   function go(n, enter) {
     n = clamp(n);
     if (n === st.page) return;
-    show(n, { enter: enter || null, top: true });
-    $('bar').classList.remove('hidden');
+    show(n, { enter: enter || null, top: true, nav: true });
+    if (!st.hideBar) bar.classList.remove('hidden');
   }
   const nextPage = () => go(st.page + 1, 'l');
   const prevPage = () => go(st.page - 1, 'r');
@@ -285,12 +434,29 @@
 
   $('pageIn').addEventListener('change', e => { go(parseInt(e.target.value, 10) || st.page); e.target.blur(); });
   $('pageIn').addEventListener('focus', e => e.target.select());
-  $('btnMenu').onclick = () => $('panel').classList.toggle('open');
-  scroller.addEventListener('pointerdown', () => $('panel').classList.remove('open'));
+  $('btnMenu').onclick = () => {
+    const open = panel.classList.toggle('open');
+    if (open) { renderLog(); protectStorage(); }
+  };
+
+  // ---------- tap to show / hide the toolbar ----------
+  let tapIgnore = false;
+  scroller.addEventListener('pointerdown', () => {
+    tapIgnore = panel.classList.contains('open');       // a tap that only closes the menu should not also hide the toolbar
+    panel.classList.remove('open');
+  });
+  scroller.addEventListener('click', () => {
+    if (tapIgnore) { tapIgnore = false; return; }
+    if (window.getSelection && String(window.getSelection())) return;   // tapping while text is selected just clears it
+    const hide = !bar.classList.contains('hidden');
+    st.hideBar = hide;
+    bar.classList.toggle('hidden', hide);
+    if (hide) panel.classList.remove('open');
+    save();
+  });
 
   // ---------- swipe with live visual feedback ----------
-  const hint = $('hint');
-  let drag = null;   // { x, y, mode: null | 'h' | 'v', ready }
+  const hint = $('hint');   // drag = { x, y, mode: null | 'h' | 'v', ready } (declared above)
 
   function hideHint() { hint.style.opacity = '0'; hint.classList.remove('ready', 'end'); }
 
@@ -341,18 +507,20 @@
     pgEl.classList.remove('snap', 'exit');
   }, { passive: true });
 
+  // Not passive on purpose: lets us cancel a downward pull at the top of the page (pull-to-refresh)
   scroller.addEventListener('touchmove', e => {
     if (!drag) return;
     if (e.touches.length > 1) { if (drag.mode === 'h') snapBack(); drag = null; return; }
     const t = e.touches[0];
     const dx = t.clientX - drag.x, dy = t.clientY - drag.y;
+    if (scroller.scrollTop <= 1 && dy > 0 && Math.abs(dy) >= Math.abs(dx) && e.cancelable) e.preventDefault();
     if (!drag.mode) {
       if (Math.max(Math.abs(dx), Math.abs(dy)) < 10) return;
       drag.mode = Math.abs(dx) > Math.abs(dy) * 1.5 ? 'h' : 'v';   // horizontal swipe vs. normal scroll
       if (drag.mode === 'h') {
         pgEl.classList.remove('in-l', 'in-r');
         pgEl.classList.add('dragging');
-        $('panel').classList.remove('open');
+        panel.classList.remove('open');
       }
     }
     if (drag.mode !== 'h') return;
@@ -363,7 +531,7 @@
     pgEl.style.transform = 'translateX(' + tx + 'px)';
     pgEl.style.opacity = String(1 - Math.min(Math.abs(tx) / w, 0.6) * 0.5);
     updateHint(dx, has, target);
-  }, { passive: true });
+  }, { passive: false });
 
   scroller.addEventListener('touchend', e => {
     if (!drag) return;
@@ -392,21 +560,21 @@
     else if (e.key === 'End' && e.ctrlKey) go(TOTAL);
   });
 
-  // ---------- auto-hide toolbar & remember scroll ----------
+  // ---------- auto-hide toolbar on scroll & remember scroll position ----------
   let lastTop = 0, saveT = null;
   scroller.addEventListener('scroll', () => {
     const y = scroller.scrollTop;
     if (Date.now() < suppressUntil) { lastTop = y; return; }
-    if (y < 8 || y < lastTop - 8) $('bar').classList.remove('hidden');
-    else if (y > lastTop + 12) { $('bar').classList.add('hidden'); $('panel').classList.remove('open'); }
+    if (!st.hideBar) {                              // if you hid the toolbar by tapping, scrolling leaves it alone
+      if (y < 8 || y < lastTop - 8) bar.classList.remove('hidden');
+      else if (y > lastTop + 12) { bar.classList.add('hidden'); panel.classList.remove('open'); }
+    }
     lastTop = y;
     clearTimeout(saveT);
     saveT = setTimeout(() => { st.sy = y / Math.max(1, pgEl.offsetHeight); save(); }, 400);
   }, { passive: true });
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { st.sy = scroller.scrollTop / Math.max(1, pgEl.offsetHeight); save(); }
-  });
-  window.addEventListener('pagehide', () => { st.sy = scroller.scrollTop / Math.max(1, pgEl.offsetHeight); save(); });
+  const saveScroll = () => { st.sy = scroller.scrollTop / Math.max(1, pgEl.offsetHeight); save(); };
+  window.addEventListener('pagehide', saveScroll);
 
   // ---------- re-fit when the width changes (rotation, resize) ----------
   let lastW = scroller.clientWidth, rzT = null;
@@ -420,10 +588,42 @@
     }, 250);
   });
 
-  // ---------- offline / install support ----------
-  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-    navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW', e));
+  // ---------- offline support and "update available" ----------
+  let swReg = null, updating = false, reloaded = false;
+  const showUpdate = () => $('update').classList.add('show');
+  function applyUpdate() {
+    const waiting = swReg && swReg.waiting;
+    if (!waiting) { location.reload(); return; }
+    updating = true;
+    waiting.postMessage({ type: 'SKIP_WAITING' });
+    setTimeout(() => { if (!reloaded) { reloaded = true; location.reload(); } }, 4000);   // safety net
   }
+  $('update').onclick = applyUpdate;
+  $('updX').onclick = e => { e.stopPropagation(); $('update').classList.remove('show'); };
+
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!updating || reloaded) return;       // ignore the first-install takeover
+      reloaded = true;
+      location.reload();
+    });
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      swReg = reg;
+      if (reg.waiting && navigator.serviceWorker.controller) showUpdate();
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) showUpdate();
+        });
+      });
+    }).catch(e => console.warn('SW', e));
+    // look for a new version each time the app comes back to the front
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && swReg) swReg.update().catch(() => {});
+    });
+  }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveScroll(); });
 
   // ---------- go ----------
   updateUI();
