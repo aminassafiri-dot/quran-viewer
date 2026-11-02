@@ -47,12 +47,27 @@
     padding:calc(var(--bar-h) + env(safe-area-inset-top)) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     touch-action:pan-y}
   #stage{display:flex;justify-content:center;width:100%}
-  .pg{position:relative;margin:0 auto;background:#fff;box-shadow:0 0 0 1px #0003}
+  .pg{position:relative;margin:0 auto;background:#fff;box-shadow:0 0 0 1px #0003;will-change:transform}
   .pg canvas{display:block}
-  .pg.in-l{animation:inl .22s ease-out}
-  .pg.in-r{animation:inr .22s ease-out}
-  @keyframes inl{from{transform:translateX(-36px);opacity:0}to{transform:none;opacity:1}}
-  @keyframes inr{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}
+
+  /* Swipe feedback: page follows the finger, then snaps back or slides away */
+  .pg.dragging{transition:none;box-shadow:0 0 24px #000a}
+  .pg.snap{transition:transform .22s cubic-bezier(.2,.8,.3,1),opacity .22s ease}
+  .pg.exit{transition:transform .16s ease-in,opacity .16s ease-in}
+  .pg.in-l{animation:inl .24s ease-out}
+  .pg.in-r{animation:inr .24s ease-out}
+  @keyframes inl{from{transform:translateX(-48px);opacity:0}to{transform:none;opacity:1}}
+  @keyframes inr{from{transform:translateX(48px);opacity:0}to{transform:none;opacity:1}}
+  @media (prefers-reduced-motion:reduce){.pg.in-l,.pg.in-r{animation:none}.pg.snap,.pg.exit{transition:none}}
+
+  /* Hint shown on the edge revealed by the drag */
+  #hint{position:fixed;top:50%;z-index:12;transform:translateY(-50%);min-width:96px;padding:10px 14px;border-radius:14px;
+    background:#1f1f1ff2;border:1px solid #ffffff33;color:var(--fg);text-align:center;font-size:12px;line-height:1.35;
+    opacity:0;pointer-events:none;box-shadow:0 4px 16px #0006;transition:background .12s,color .12s}
+  #hint b{display:block;font-size:19px;margin-top:2px}
+  #hint .arrow{display:block;font-size:22px;line-height:1;margin-bottom:2px}
+  #hint.ready{background:var(--accent);color:#001a33;border-color:transparent}
+  #hint.end{background:#3a2a1ff2;border-color:#ffb34766}
 
   /* Selectable text layer (invisible text on top of canvas) */
   .textLayer{position:absolute;inset:0;overflow:clip;line-height:1;text-size-adjust:none;-webkit-text-size-adjust:none;
@@ -89,6 +104,7 @@
 </div>
 
 <div id="scroller"><div id="stage"><div class="pg" id="pg"></div></div></div>
+<div id="hint" aria-hidden="true"></div>
 <div id="busy"></div>
 
 <div id="loading"><div class="spin"></div><div id="loadMsg">Loading viewer…</div></div>
@@ -100,13 +116,15 @@
   const $ = id => document.getElementById(id);
 
   // Keep this the same as VERSION in sw.js every time you publish an update.
-  const APP_VERSION = 'v3';
+  const APP_VERSION = 'v4';
   $('verLbl').textContent = 'Version ' + APP_VERSION;
 
   const DOC_ID = 'quran_pages_1-604';
   const KEY = 'offlinePdfViewer:' + DOC_ID;
   const MAX_PIXELS = 15500000;          // stay under mobile canvas limit (~16.7M)
-  const SWIPE_MIN = 60;                 // minimum swipe distance in px
+  const SWIPE_MIN = 60;                 // drag distance (px) needed to turn the page
+  const DRAG_FOLLOW = 0.85;             // how closely the page follows the finger (1 = exactly)
+  const DRAG_EDGE = 0.25;               // resistance when there is no page in that direction
 
   // ---------- state & persistence ----------
   // Zoom is fixed (always fit width) and swipe is always Arabic-book style (swipe right = next page).
@@ -165,6 +183,13 @@
   const scroller = $('scroller'), pgEl = $('pg');
   let token = 0, curTask = null, suppressUntil = 0;
 
+  function resetPageStyle() {
+    pgEl.classList.remove('dragging', 'snap', 'exit');
+    pgEl.style.transform = '';
+    pgEl.style.opacity = '';
+  }
+
+  // opts.enter: 'l' = new page slides in from the left, 'r' = from the right
   async function show(n, opts) {
     opts = opts || {};
     n = clamp(n);
@@ -207,11 +232,17 @@
       tl.style.width = Math.floor(vp.width) + 'px';
       tl.style.height = Math.floor(vp.height) + 'px';
 
+      resetPageStyle();
       pgEl.className = 'pg';
       pgEl.replaceChildren(cv, tl);
       pgEl.style.width = Math.floor(vp.width) + 'px';
       pgEl.style.height = Math.floor(vp.height) + 'px';
-      if (opts.from) { void pgEl.offsetWidth; pgEl.classList.add(opts.from < 0 ? 'in-l' : 'in-r'); }
+      if (opts.enter) {
+        void pgEl.offsetWidth;
+        const cls = 'in-' + opts.enter;
+        pgEl.classList.add(cls);
+        setTimeout(() => pgEl.classList.remove(cls), 300);
+      }
 
       // scroll position (programmatic scrolls must not auto-hide the toolbar)
       suppressUntil = Date.now() + 400;
@@ -235,21 +266,22 @@
     } catch (err) {
       if (err && err.name === 'RenderingCancelledException') return;
       console.error(err);
+      resetPageStyle();
       $('busy').classList.remove('on');
       $('loading').classList.add('done');
     }
   }
 
   // ---------- navigation (Arabic book style) ----------
-  // Right swipe / left button = next page. Left swipe / right button = previous page.
-  function go(n, from) {
+  // Next page enters from the left, previous page enters from the right.
+  function go(n, enter) {
     n = clamp(n);
     if (n === st.page) return;
-    show(n, { from: from || 0, top: true });
+    show(n, { enter: enter || null, top: true });
     $('bar').classList.remove('hidden');
   }
-  const nextPage = sign => go(st.page + 1, sign);
-  const prevPage = sign => go(st.page - 1, sign);
+  const nextPage = () => go(st.page + 1, 'l');
+  const prevPage = () => go(st.page - 1, 'r');
 
   function updateUI() {
     $('pageIn').value = st.page;
@@ -259,43 +291,117 @@
     document.title = 'Page ' + st.page + ' / ' + TOTAL;
   }
 
-  $('btnL').onclick = () => nextPage(-1);
-  $('btnR').onclick = () => prevPage(1);
-  $('pageIn').addEventListener('change', e => { go(parseInt(e.target.value, 10) || st.page, 0); e.target.blur(); });
+  $('btnL').onclick = nextPage;
+  $('btnR').onclick = prevPage;
+  $('pageIn').addEventListener('change', e => { go(parseInt(e.target.value, 10) || st.page); e.target.blur(); });
   $('pageIn').addEventListener('focus', e => e.target.select());
-  $('slider').addEventListener('change', e => go(parseInt(e.target.value, 10), 0));
+  $('slider').addEventListener('change', e => go(parseInt(e.target.value, 10)));
   $('slider').addEventListener('input', e => { $('pageIn').value = e.target.value; });
-  $('btnFirst').onclick = () => { go(1, 0); $('panel').classList.remove('open'); };
+  $('btnFirst').onclick = () => { go(1); $('panel').classList.remove('open'); };
   $('btnMenu').onclick = () => $('panel').classList.toggle('open');
   scroller.addEventListener('pointerdown', () => $('panel').classList.remove('open'));
 
-  // ---------- swipe ----------
-  let t0 = null;
+  // ---------- swipe with live visual feedback ----------
+  const hint = $('hint');
+  let drag = null;   // { x, y, mode: null | 'h' | 'v', ready }
+
+  function hideHint() { hint.style.opacity = '0'; hint.classList.remove('ready', 'end'); }
+
+  function updateHint(dx, hasTarget, targetPage) {
+    const toRight = dx > 0;                       // dragging right reveals the left edge
+    hint.style.left = toRight ? '12px' : 'auto';
+    hint.style.right = toRight ? 'auto' : '12px';
+    const dist = Math.abs(dx);
+    const ready = hasTarget && dist >= SWIPE_MIN;
+    if (hasTarget) {
+      hint.innerHTML = '<span class="arrow">' + (toRight ? '›' : '‹') + '</span>' +
+        (toRight ? 'Next page' : 'Previous page') + '<b>' + targetPage + '</b>';
+    } else {
+      hint.innerHTML = toRight ? 'This is the<br>last page' : 'This is the<br>first page';
+    }
+    hint.classList.toggle('ready', ready);
+    hint.classList.toggle('end', !hasTarget);
+    hint.style.opacity = String(Math.min(1, dist / (SWIPE_MIN * 0.7)));
+    if (ready && !drag.ready && navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} }
+    drag.ready = ready;
+  }
+
+  function snapBack() {
+    hideHint();
+    pgEl.classList.remove('dragging');
+    pgEl.classList.add('snap');
+    pgEl.style.transform = '';
+    pgEl.style.opacity = '';
+    setTimeout(() => pgEl.classList.remove('snap'), 260);
+  }
+
+  function commit(toRight) {
+    hideHint();
+    const w = scroller.clientWidth;
+    pgEl.classList.remove('dragging');
+    pgEl.classList.add('exit');
+    pgEl.style.transform = 'translateX(' + (toRight ? w : -w) + 'px)';
+    pgEl.style.opacity = '0';
+    toRight ? nextPage() : prevPage();            // swipe right = next page
+  }
+
   scroller.addEventListener('touchstart', e => {
-    if (e.touches.length !== 1) { t0 = null; return; }
+    if (e.touches.length !== 1) { drag = null; return; }
+    if (window.getSelection && String(window.getSelection())) { drag = null; return; }   // selecting text
     const t = e.touches[0];
-    t0 = { x: t.clientX, y: t.clientY, time: Date.now() };
+    drag = { x: t.clientX, y: t.clientY, mode: null, ready: false };
+    pgEl.classList.remove('snap', 'exit');
   }, { passive: true });
-  scroller.addEventListener('touchcancel', () => { t0 = null; }, { passive: true });
+
+  scroller.addEventListener('touchmove', e => {
+    if (!drag) return;
+    if (e.touches.length > 1) { if (drag.mode === 'h') snapBack(); drag = null; return; }
+    const t = e.touches[0];
+    const dx = t.clientX - drag.x, dy = t.clientY - drag.y;
+    if (!drag.mode) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 10) return;
+      drag.mode = Math.abs(dx) > Math.abs(dy) * 1.5 ? 'h' : 'v';   // horizontal swipe vs. normal scroll
+      if (drag.mode === 'h') {
+        pgEl.classList.remove('in-l', 'in-r');
+        pgEl.classList.add('dragging');
+        $('panel').classList.remove('open');
+      }
+    }
+    if (drag.mode !== 'h') return;
+    const target = st.page + (dx > 0 ? 1 : -1);
+    const has = target >= 1 && target <= TOTAL;
+    const tx = dx * (has ? DRAG_FOLLOW : DRAG_EDGE);
+    const w = Math.max(1, scroller.clientWidth);
+    pgEl.style.transform = 'translateX(' + tx + 'px)';
+    pgEl.style.opacity = String(1 - Math.min(Math.abs(tx) / w, 0.6) * 0.5);
+    updateHint(dx, has, target);
+  }, { passive: true });
+
   scroller.addEventListener('touchend', e => {
-    if (!t0) return;
-    const s = t0; t0 = null;
-    if (e.touches.length) return;
-    const sel = window.getSelection && String(window.getSelection());
-    if (sel) return;                                         // user is selecting text
+    if (!drag) return;
+    const s = drag; drag = null;
+    if (s.mode !== 'h') return;
+    if (e.touches.length) { snapBack(); return; }
     const t = e.changedTouches[0];
-    const dx = t.clientX - s.x, dy = t.clientY - s.y, dt = Date.now() - s.time;
-    if (Math.abs(dx) < SWIPE_MIN || Math.abs(dx) < Math.abs(dy) * 1.5 || dt > 900) return;
-    dx > 0 ? nextPage(1) : prevPage(-1);                     // swipe right = next page
+    const dx = t.clientX - s.x;
+    const target = st.page + (dx > 0 ? 1 : -1);
+    const has = target >= 1 && target <= TOTAL;
+    if (has && Math.abs(dx) >= SWIPE_MIN) commit(dx > 0);
+    else snapBack();                              // not far enough, or no page that way
+  }, { passive: true });
+
+  scroller.addEventListener('touchcancel', () => {
+    if (drag && drag.mode === 'h') snapBack();
+    drag = null;
   }, { passive: true });
 
   // ---------- keyboard ----------
   document.addEventListener('keydown', e => {
     if (e.target && e.target.tagName === 'INPUT') return;
-    if (e.key === 'ArrowLeft') nextPage(-1);
-    else if (e.key === 'ArrowRight') prevPage(1);
-    else if (e.key === 'Home' && e.ctrlKey) go(1, 0);
-    else if (e.key === 'End' && e.ctrlKey) go(TOTAL, 0);
+    if (e.key === 'ArrowLeft') nextPage();
+    else if (e.key === 'ArrowRight') prevPage();
+    else if (e.key === 'Home' && e.ctrlKey) go(1);
+    else if (e.key === 'End' && e.ctrlKey) go(TOTAL);
   });
 
   // ---------- auto-hide toolbar & remember scroll ----------
