@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="color-scheme" content="light dark">
+<meta name="color-scheme" content="light">
 <title>Quran – Pages 1–604</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#1f1f1f">
@@ -13,45 +13,39 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
-  :root{--bar-h:48px;--bg:#2b2b2b;--bar:#1f1f1fee;--fg:#f2f2f2;--accent:#4aa3ff}
+  /* --bg is the colour behind the pages. It matches the page colour so nothing dark flashes while swiping. */
+  :root{--bar-h:48px;--bg:#ffffff;--bar:#1f1f1f;--fg:#f2f2f2;--accent:#4aa3ff}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;touch-action:pan-y}
+  html,body{margin:0;height:100%;background:var(--bg);color:#222;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;touch-action:pan-y}
 
   /* Toolbar */
   #bar{position:fixed;top:0;left:0;right:0;z-index:20;height:calc(var(--bar-h) + env(safe-area-inset-top));
     padding:env(safe-area-inset-top) max(8px,env(safe-area-inset-right)) 0 max(8px,env(safe-area-inset-left));
-    display:flex;align-items:center;gap:6px;background:var(--bar);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    display:flex;align-items:center;gap:6px;background:var(--bar);color:var(--fg);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
     transition:transform .2s ease}
   #bar.hidden{transform:translateY(-100%)}
   #bar button{appearance:none;border:0;background:#ffffff1a;color:var(--fg);height:36px;min-width:40px;padding:0 10px;border-radius:8px;font-size:18px;line-height:1;cursor:pointer}
   #bar button:active{background:#ffffff40}
-  #bar button:disabled{opacity:.35}
-  #pageBox{flex:1;display:flex;justify-content:center;align-items:center;gap:6px;font-size:15px;white-space:nowrap}
+  #pageBox{flex:1;display:flex;justify-content:center;align-items:center;gap:6px;font-size:15px;white-space:nowrap;margin-right:46px} /* margin balances the menu button so the page number stays centred */
   #pageIn{width:58px;height:34px;border-radius:8px;border:1px solid #ffffff40;background:#00000040;color:var(--fg);font-size:16px;text-align:center}
 
   /* Menu panel */
   #panel{position:fixed;z-index:19;top:calc(var(--bar-h) + env(safe-area-inset-top));left:8px;right:8px;max-width:420px;margin:0 auto;
-    background:#1f1f1f;border:1px solid #ffffff22;border-radius:12px;padding:14px;display:none;box-shadow:0 8px 30px #0008}
+    background:#1f1f1f;color:var(--fg);border:1px solid #ffffff22;border-radius:12px;padding:14px;display:none;box-shadow:0 8px 30px #0008}
   #panel.open{display:block}
-  #panel button{appearance:none;border:0;background:#ffffff1a;color:var(--fg);border-radius:8px;cursor:pointer;font-family:inherit}
-  #panel button:active{background:#ffffff40}
-  #panel h3{margin:0 0 8px;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;opacity:.65}
-  #panel input[type=range]{width:100%;margin:4px 0 14px}
-  #panel .row{display:flex;gap:6px;margin-bottom:12px}
-  #panel .row button{flex:1;height:38px;font-size:14px}
-  #panel p{margin:0 0 8px;font-size:12px;opacity:.6;line-height:1.4}
+  #panel p{margin:0 0 8px;font-size:13px;opacity:.75;line-height:1.45}
   #panel .ver{margin:0;font-size:12px;opacity:.85;font-weight:600}
 
   /* Page area: vertical scroll only, no pinch/double-tap zoom, always fit width */
-  #scroller{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  #scroller{position:fixed;inset:0;background:var(--bg);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
     padding:calc(var(--bar-h) + env(safe-area-inset-top)) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     touch-action:pan-y}
-  #stage{display:flex;justify-content:center;width:100%}
-  .pg{position:relative;margin:0 auto;background:#fff;box-shadow:0 0 0 1px #0003;will-change:transform}
+  #stage{display:flex;justify-content:center;width:100%;background:var(--bg)}
+  .pg{position:relative;margin:0 auto;background:#fff;will-change:transform}
   .pg canvas{display:block}
 
   /* Swipe feedback: page follows the finger, then snaps back or slides away */
-  .pg.dragging{transition:none;box-shadow:0 0 24px #000a}
+  .pg.dragging{transition:none;box-shadow:0 0 14px #0003}
   .pg.snap{transition:transform .22s cubic-bezier(.2,.8,.3,1),opacity .22s ease}
   .pg.exit{transition:transform .16s ease-in,opacity .16s ease-in}
   .pg.in-l{animation:inl .24s ease-out}
@@ -77,10 +71,10 @@
   .textLayer br::selection{background:transparent}
   .textLayer .endOfContent{display:block;position:absolute;inset:100% 0 0;z-index:0;cursor:default;user-select:none}
 
-  /* Loading overlay */
-  #loading{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-size:15px;text-align:center;padding:24px}
+  /* Loading overlay (white, so there is no dark-to-light flash at start-up) */
+  #loading{position:fixed;inset:0;z-index:50;background:#fff;color:#444;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-size:15px;text-align:center;padding:24px}
   #loading.done{display:none}
-  .spin{width:34px;height:34px;border:3px solid #ffffff30;border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite}
+  .spin{width:34px;height:34px;border:3px solid #00000020;border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
   #busy{position:fixed;z-index:15;top:calc(var(--bar-h) + env(safe-area-inset-top) + 10px);left:50%;transform:translateX(-50%);width:26px;height:26px;border:3px solid #00000030;border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;display:none;background:#fff8}
   #busy.on{display:block}
@@ -90,15 +84,10 @@
 
 <div id="bar">
   <button id="btnMenu" aria-label="Menu">☰</button>
-  <button id="btnL" aria-label="Next page">›</button>
   <div id="pageBox"><input id="pageIn" type="number" inputmode="numeric" min="1" value="1" aria-label="Page number"><span id="pageTot">/ 604</span></div>
-  <button id="btnR" aria-label="Previous page">‹</button>
 </div>
 
 <div id="panel">
-  <h3>Go to page</h3>
-  <input id="slider" type="range" min="1" max="604" value="1">
-  <div class="row"><button id="btnFirst">First page</button></div>
   <p>Swipe right for the next page, swipe left for the previous page. Your last page and scroll position are saved automatically on this device. Works fully offline.</p>
   <p class="ver" id="verLbl"></p>
 </div>
@@ -116,7 +105,7 @@
   const $ = id => document.getElementById(id);
 
   // Keep this the same as VERSION in sw.js every time you publish an update.
-  const APP_VERSION = 'v4';
+  const APP_VERSION = 'v5';
   $('verLbl').textContent = 'Version ' + APP_VERSION;
 
   const DOC_ID = 'quran_pages_1-604';
@@ -125,6 +114,7 @@
   const SWIPE_MIN = 60;                 // drag distance (px) needed to turn the page
   const DRAG_FOLLOW = 0.85;             // how closely the page follows the finger (1 = exactly)
   const DRAG_EDGE = 0.25;               // resistance when there is no page in that direction
+  const EXIT_MS = 160;                  // slide-out time; the new page waits for this so there is no jump
 
   // ---------- state & persistence ----------
   // Zoom is fixed (always fit width) and swipe is always Arabic-book style (swipe right = next page).
@@ -176,12 +166,10 @@
   st.page = clamp(st.page || 1);
   $('pageTot').textContent = '/ ' + TOTAL;
   $('pageIn').max = TOTAL;
-  $('slider').max = TOTAL;
-  $('slider').style.direction = 'rtl';
 
   // ---------- rendering (always fit width) ----------
   const scroller = $('scroller'), pgEl = $('pg');
-  let token = 0, curTask = null, suppressUntil = 0;
+  let token = 0, curTask = null, suppressUntil = 0, exitUntil = 0;
 
   function resetPageStyle() {
     pgEl.classList.remove('dragging', 'snap', 'exit');
@@ -223,6 +211,13 @@
       curTask = task;
       await task.promise;
       if (my !== token) return;
+
+      // let the old page finish sliding out before the new one appears
+      const wait = exitUntil - Date.now();
+      if (opts.enter && wait > 0) {
+        await new Promise(r => setTimeout(r, wait));
+        if (my !== token) return;
+      }
 
       // text layer (selectable text)
       const tl = document.createElement('div');
@@ -285,19 +280,11 @@
 
   function updateUI() {
     $('pageIn').value = st.page;
-    $('slider').value = st.page;
-    $('btnL').disabled = st.page >= TOTAL;   // left button = next page
-    $('btnR').disabled = st.page <= 1;       // right button = previous page
     document.title = 'Page ' + st.page + ' / ' + TOTAL;
   }
 
-  $('btnL').onclick = nextPage;
-  $('btnR').onclick = prevPage;
   $('pageIn').addEventListener('change', e => { go(parseInt(e.target.value, 10) || st.page); e.target.blur(); });
   $('pageIn').addEventListener('focus', e => e.target.select());
-  $('slider').addEventListener('change', e => go(parseInt(e.target.value, 10)));
-  $('slider').addEventListener('input', e => { $('pageIn').value = e.target.value; });
-  $('btnFirst').onclick = () => { go(1); $('panel').classList.remove('open'); };
   $('btnMenu').onclick = () => $('panel').classList.toggle('open');
   scroller.addEventListener('pointerdown', () => $('panel').classList.remove('open'));
 
@@ -342,6 +329,7 @@
     pgEl.classList.add('exit');
     pgEl.style.transform = 'translateX(' + (toRight ? w : -w) + 'px)';
     pgEl.style.opacity = '0';
+    exitUntil = Date.now() + EXIT_MS;
     toRight ? nextPage() : prevPage();            // swipe right = next page
   }
 
